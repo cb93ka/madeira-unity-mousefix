@@ -1,0 +1,38 @@
+name: Build version.dll
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          set -euo pipefail
+          curl -sSL -o llvm-mingw.tar.xz https://github.com/mstorsjo/llvm-mingw/releases/download/20260421/llvm-mingw-20260421-ucrt-ubuntu-22.04-x86_64.tar.xz
+          tar -xf llvm-mingw.tar.xz
+          echo "$PWD/llvm-mingw-20260421-ucrt-ubuntu-22.04-x86_64/bin" >> "$GITHUB_PATH"
+      - name: Build
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          x86_64-w64-mingw32-clang -O2 -shared -Wall -Wno-unused-function -o out/version.dll src/mousefix.c src/version.def -luser32 -lkernel32
+          x86_64-w64-mingw32-strip out/version.dll
+          llvm-objdump -p out/version.dll | grep -A40 'Export Table' | head -40
+          sha256sum out/version.dll
+      - uses: actions/upload-artifact@v4
+        with:
+          name: version.dll
+          path: out/version.dll
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="mousefix-${GITHUB_SHA::7}-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" out/version.dll --target "$GITHUB_SHA" --title "$TAG" --notes "version.dll mouse fix for Unity games in Madeira"
