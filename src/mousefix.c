@@ -26,6 +26,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* NEXTRAWINPUTBLOCK needs it; mingw headers do not define it. */
+typedef unsigned __int64 QWORD;
+
 /* ------------------------------------------------------------------ config */
 
 static int g_fix;
